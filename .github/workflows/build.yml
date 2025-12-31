@@ -1,8 +1,8 @@
-name: Build Certificate Tracker
+name: Build Certificate Tracker (Win + Mac)
 
 on:
   push:
-    branches: [ main ]
+    branches: [ "main" ]
   workflow_dispatch:
 
 jobs:
@@ -10,28 +10,30 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [windows-latest, macos-latest]
+        os: [ windows-latest, macos-latest ]
 
     runs-on: ${{ matrix.os }}
 
     steps:
-      - name: Checkout repository
+      - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup Node.js
+      - name: Setup Node
         uses: actions/setup-node@v4
         with:
           node-version: 20
 
       - name: Install dependencies
-        run: npm install
+        run: npm ci
 
-      - name: Build app
-        run: |
-          npm run dist -- --publish=never
+      - name: Build installers
+        run: npm run dist
+        env:
+          # يمنع محاولة النشر/الريليز ويخليها build فقط
+          CSC_IDENTITY_AUTO_DISCOVERY: "false"
 
-      - name: Upload build artifacts
+      - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
           name: Certificate-Tracker-${{ matrix.os }}
-          path: dist/
+          path: dist/*
