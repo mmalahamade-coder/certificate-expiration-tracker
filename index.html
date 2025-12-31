@@ -1,0 +1,717 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Certificate Tracker</title>
+  <style>
+    :root{
+      --bg:#f4f7ff;
+      --card:#ffffff;
+      --text:#111827;
+      --muted:#6b7280;
+      --line:#e5e7eb;
+      --primary:#4f46e5;
+      --primary2:#4338ca;
+      --danger:#ef4444;
+      --warn:#f59e0b;
+      --ok:#10b981;
+      --shadow: 0 18px 60px rgba(17,24,39,.10);
+      --radius:18px;
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial;
+      color:var(--text);
+      background: radial-gradient(1200px 600px at 20% 10%, #eaf0ff 0%, transparent 55%),
+                  radial-gradient(1200px 600px at 80% 20%, #e9fbff 0%, transparent 55%),
+                  var(--bg);
+      min-height:100vh;
+    }
+    a{color:inherit}
+    .wrap{max-width:1050px;margin:26px auto;padding:0 16px}
+    .hidden{display:none!important}
+
+    /* Top bar */
+    .topbar{
+      background:var(--card);
+      border:1px solid var(--line);
+      border-radius:24px;
+      padding:18px 18px;
+      box-shadow: var(--shadow);
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:12px;
+    }
+    .brand{
+      display:flex;align-items:center;gap:10px;
+      font-weight:800;font-size:22px;
+    }
+    .pill{
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      padding:10px 14px;
+      border-radius:999px;
+      border:1px solid var(--line);
+      background:#fff;
+      font-weight:700;
+      cursor:pointer;
+      user-select:none;
+    }
+    .pill.primary{
+      border-color:transparent;
+      background: linear-gradient(135deg, var(--primary), var(--primary2));
+      color:white;
+    }
+    .pill.danger{
+      border-color:transparent;
+      background: #111827;
+      color:white;
+    }
+    .actions{display:flex;gap:10px;flex-wrap:wrap;justify-content:flex-end}
+
+    /* Login */
+    .center{
+      min-height:100vh;
+      display:flex;align-items:center;justify-content:center;
+      padding:24px;
+    }
+    .loginCard{
+      width:min(520px, 92vw);
+      background:var(--card);
+      border:1px solid var(--line);
+      border-radius:22px;
+      padding:26px;
+      box-shadow: var(--shadow);
+    }
+    .loginTitle{font-size:26px;font-weight:900;margin:0 0 8px}
+    .loginSub{margin:0 0 16px;color:var(--muted);font-weight:600}
+    .row{display:flex;gap:12px;flex-wrap:wrap}
+    .field{flex:1;min-width:220px}
+    label{display:block;font-weight:800;margin:10px 0 8px}
+    input{
+      width:100%;
+      padding:12px 14px;
+      border:1px solid var(--line);
+      border-radius:12px;
+      outline:none;
+      font-size:14px;
+      background:white;
+    }
+    input:focus{border-color:#c7d2fe; box-shadow:0 0 0 4px rgba(79,70,229,.12)}
+    .btn{
+      width:100%;
+      margin-top:14px;
+      padding:12px 14px;
+      border:none;
+      border-radius:12px;
+      cursor:pointer;
+      font-weight:900;
+      color:white;
+      background: linear-gradient(135deg, var(--primary), var(--primary2));
+    }
+    .err{margin-top:10px;color:#b91c1c;font-weight:800;display:none}
+
+    /* Cards / sections */
+    .section{margin-top:16px}
+    .panel{
+      background:var(--card);
+      border:1px solid var(--line);
+      border-radius:24px;
+      padding:16px;
+      box-shadow: var(--shadow);
+    }
+
+    .stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-top:14px}
+    .stat{
+      border:1px solid var(--line);
+      border-radius:18px;
+      padding:14px;
+      background:#fff;
+      display:flex;align-items:center;justify-content:space-between;gap:10px;
+    }
+    .stat h4{margin:0;font-size:13px;color:var(--muted);font-weight:900}
+    .stat .num{font-size:26px;font-weight:1000}
+
+    .grid2{display:grid;grid-template-columns:1.2fr .8fr;gap:14px;align-items:start}
+    @media (max-width:980px){.grid2{grid-template-columns:1fr}.stats{grid-template-columns:1fr}}
+
+    .title{font-size:22px;font-weight:1000;margin:0 0 10px}
+    .muted{color:var(--muted);font-weight:700}
+    .small{font-size:12px}
+
+    .list{display:flex;flex-direction:column;gap:10px;margin-top:12px}
+    .cardItem{
+      border:1px solid var(--line);
+      border-radius:18px;
+      padding:14px;
+      background:#fff;
+      display:flex;align-items:center;justify-content:space-between;gap:14px;
+    }
+    .cardItem:hover{border-color:#c7d2fe}
+    .left{
+      display:flex;flex-direction:column;gap:6px;min-width:0;
+    }
+    .nameLine{
+      display:flex;align-items:center;gap:10px;flex-wrap:wrap;
+      font-weight:1000;
+    }
+    .meta{color:var(--muted);font-weight:750;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .badge{
+      display:inline-flex;align-items:center;gap:6px;
+      padding:6px 10px;border-radius:999px;font-weight:1000;font-size:12px;
+      border:1px solid transparent;
+    }
+    .badge.warn{background:rgba(245,158,11,.12); color:#92400e; border-color:rgba(245,158,11,.25)}
+    .badge.danger{background:rgba(239,68,68,.12); color:#991b1b; border-color:rgba(239,68,68,.25)}
+    .badge.ok{background:rgba(16,185,129,.12); color:#065f46; border-color:rgba(16,185,129,.25)}
+
+    .btnMini{
+      padding:10px 12px;border-radius:12px;border:1px solid var(--line);
+      background:#fff;font-weight:950;cursor:pointer;
+      white-space:nowrap;
+    }
+    .btnMini.primary{background:linear-gradient(135deg,var(--primary),var(--primary2));border-color:transparent;color:#fff}
+    .btnMini.danger{background:#fff;border-color:#fecaca;color:#b91c1c}
+    .btnMini.ghost{background:#111827;color:#fff;border-color:transparent}
+    .btnMini:disabled{opacity:.55;cursor:not-allowed}
+
+    /* Modal */
+    .overlay{
+      position:fixed;inset:0;background:rgba(17,24,39,.45);
+      display:none;align-items:center;justify-content:center;
+      padding:18px;
+    }
+    .modal{
+      width:min(720px, 96vw);
+      background:#fff;border-radius:22px;border:1px solid var(--line);
+      box-shadow:var(--shadow);
+      padding:16px;
+    }
+    .modalTop{display:flex;align-items:center;justify-content:space-between;gap:10px}
+    .modalTop h3{margin:0;font-size:18px;font-weight:1000}
+    .modalBody{margin-top:10px;border-top:1px solid var(--line);padding-top:12px}
+    .kv{display:grid;grid-template-columns:160px 1fr;gap:10px;margin:10px 0}
+    .k{color:var(--muted);font-weight:950}
+    .v{font-weight:850}
+    .modalBtns{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px}
+    .closeX{border:none;background:#fff;border:1px solid var(--line);border-radius:12px;padding:10px 12px;cursor:pointer;font-weight:1000}
+
+    /* Toast */
+    .toast{
+      position:fixed;right:18px;bottom:18px;
+      background:#111827;color:#fff;
+      padding:12px 14px;border-radius:14px;
+      box-shadow:var(--shadow);
+      font-weight:900;
+      display:none;
+      max-width:min(520px, 92vw);
+    }
+  </style>
+</head>
+
+<body>
+  <!-- LOGIN VIEW -->
+  <div id="loginView" class="center">
+    <div class="loginCard">
+      <h1 class="loginTitle">Certificate Tracker</h1>
+      <p class="loginSub">Enter password to access</p>
+
+      <label for="pw">Password</label>
+      <input id="pw" type="password" autocomplete="current-password" />
+      <button id="loginBtn" class="btn" type="button">Login</button>
+      <div id="loginErr" class="err">Wrong password</div>
+    </div>
+  </div>
+
+  <!-- APP VIEW -->
+  <div id="appView" class="hidden">
+    <div class="wrap">
+      <div class="topbar">
+        <div class="brand">📋 Certificate Expiration Tracker</div>
+        <div class="actions">
+          <button id="navDashboard" class="pill primary" type="button">Dashboard</button>
+          <button id="navCerts" class="pill" type="button">Certificates</button>
+          <button id="exportBtn" class="pill" type="button">Download Excel (CSV)</button>
+          <button id="logoutBtn" class="pill danger" type="button">Logout</button>
+        </div>
+      </div>
+
+      <div class="stats">
+        <div class="stat"><div><h4>Active</h4></div><div class="num" id="statActive">0</div></div>
+        <div class="stat"><div><h4>First Alert (≤ 30 days)</h4></div><div class="num" id="stat30">0</div></div>
+        <div class="stat"><div><h4>Urgent + Expired (≤ 7 days)</h4></div><div class="num" id="stat7">0</div></div>
+      </div>
+
+      <!-- DASHBOARD (≤7 days only) -->
+      <div id="pageDashboard" class="section">
+        <div class="panel">
+          <div class="grid2">
+            <div>
+              <h2 class="title">Urgent (≤ 7 days)</h2>
+              <div class="list" id="dashList"></div>
+              <div id="dashEmpty" class="muted" style="margin-top:10px; display:none;">No certificates due within 7 days.</div>
+            </div>
+
+            <div>
+              <h2 class="title">Add New Certificate</h2>
+
+              <div class="row">
+                <div class="field">
+                  <label>Certificate Name *</label>
+                  <input id="inName" placeholder="e.g., BLS, CPR, IELTS" />
+                </div>
+                <div class="field">
+                  <label>Doctor Name *</label>
+                  <input id="inDoctor" placeholder="Doctor name" />
+                </div>
+              </div>
+
+              <div class="row">
+                <div class="field">
+                  <label>Expiration Date *</label>
+                  <input id="inDate" type="date" />
+                </div>
+                <div class="field">
+                  <label>Email Address *</label>
+                  <input id="inEmail" type="email" placeholder="email@example.com" />
+                </div>
+              </div>
+
+              <button id="addBtn" class="btnMini primary" type="button" style="margin-top:12px;">Add Certificate</button>
+              <button id="cancelBtn" class="btnMini" type="button" style="margin-top:12px;">Clear</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- CERTIFICATES PAGE -->
+      <div id="pageCerts" class="section hidden">
+        <div class="panel">
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">
+            <h2 class="title" style="margin:0">All Certificates</h2>
+            <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+              <input id="qDoctor" placeholder="Search by Doctor Name…" style="width:min(420px, 90vw)" />
+              <button id="clearSearch" class="btnMini" type="button">Clear</button>
+            </div>
+          </div>
+
+          <div class="list" id="certList"></div>
+          <div id="certEmpty" class="muted" style="margin-top:10px; display:none;">No certificates found.</div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- MODAL -->
+  <div id="overlay" class="overlay">
+    <div class="modal">
+      <div class="modalTop">
+        <h3 id="mTitle">Certificate</h3>
+        <button id="mClose" class="closeX" type="button">Close</button>
+      </div>
+      <div class="modalBody">
+        <div class="kv"><div class="k">Doctor</div><div class="v" id="mDoctor">-</div></div>
+        <div class="kv"><div class="k">Email</div><div class="v" id="mEmail">-</div></div>
+        <div class="kv"><div class="k">Expiry</div><div class="v" id="mExpiry">-</div></div>
+        <div class="kv"><div class="k">Days Remaining</div><div class="v" id="mDays">-</div></div>
+
+        <div class="modalBtns">
+          <button id="mFirst" class="btnMini" type="button">First Alert Email (30d)</button>
+          <button id="mUrgent" class="btnMini danger" type="button">Urgent Alert Email (7d)</button>
+          <button id="mDelete" class="btnMini ghost" type="button">Delete</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TOAST -->
+  <div id="toast" class="toast"></div>
+
+<script>
+(() => {
+  // ===== Settings =====
+  const PASSWORD = "1234";
+  const LS_KEY = "certTracker_v3";
+  const SESSION_KEY = "certTracker_loggedIn";
+
+  // ===== Helpers =====
+  const $ = (id) => document.getElementById(id);
+
+  function toast(msg){
+    const t = $("toast");
+    t.textContent = msg;
+    t.style.display = "block";
+    clearTimeout(toast._tm);
+    toast._tm = setTimeout(() => t.style.display = "none", 2200);
+  }
+
+  function load(){
+    try{
+      const raw = localStorage.getItem(LS_KEY);
+      const data = raw ? JSON.parse(raw) : [];
+      return Array.isArray(data) ? data : [];
+    }catch(e){ return []; }
+  }
+
+  function save(list){
+    localStorage.setItem(LS_KEY, JSON.stringify(list));
+  }
+
+  function uid(){
+    return Math.random().toString(16).slice(2) + Date.now().toString(16);
+  }
+
+  function parseDateISO(s){
+    // s like "2026-01-03"
+    const d = new Date(s + "T00:00:00");
+    return isNaN(d.getTime()) ? null : d;
+  }
+
+  function daysRemaining(expDate){
+    const now = new Date();
+    const start = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const diffMs = expDate.getTime() - start.getTime();
+    return Math.ceil(diffMs / (1000*60*60*24));
+  }
+
+  function badgeFor(days){
+    // Only ONE badge: if <=7 show urgent, else if <=30 show first, else ok
+    if(days <= 7) return { cls:"danger", text: (days < 0 ? `Expired (${Math.abs(days)}d)` : `Urgent (${days}d)`) };
+    if(days <= 30) return { cls:"warn", text:`First Alert (${days}d)` };
+    return { cls:"ok", text:`Active (${days}d)` };
+  }
+
+  function sortByDays(list){
+    return [...list].sort((a,b) => (a._days - b._days));
+  }
+
+  function decorate(list){
+    return list.map(c => {
+      const d = parseDateISO(c.expiry);
+      const dr = d ? daysRemaining(d) : 999999;
+      return {...c, _days: dr};
+    });
+  }
+
+  function renderStats(list){
+    const decorated = decorate(list);
+    const active = decorated.filter(x => x._days > 30).length;
+    const alert30 = decorated.filter(x => x._days <= 30 && x._days > 7).length;
+    const urgent7 = decorated.filter(x => x._days <= 7).length;
+    $("statActive").textContent = active;
+    $("stat30").textContent = alert30;
+    $("stat7").textContent = urgent7;
+  }
+
+  function cardHTML(c){
+    const b = badgeFor(c._days);
+    const exp = c.expiry;
+    return `
+      <div class="cardItem" data-id="${c.id}" role="button" tabindex="0">
+        <div class="left">
+          <div class="nameLine">
+            <span>${escapeHTML(c.name)}</span>
+            <span class="badge ${b.cls}">${b.text}</span>
+          </div>
+          <div class="meta">
+            Expiry: ${escapeHTML(exp)} • Email: ${escapeHTML(c.email)} • Doctor: ${escapeHTML(c.doctor)}
+          </div>
+        </div>
+        <div style="display:flex; gap:10px; align-items:center">
+          <button class="btnMini primary" type="button" data-act="open">View / Send Email</button>
+        </div>
+      </div>
+    `;
+  }
+
+  function escapeHTML(s){
+    return String(s ?? "").replace(/[&<>"']/g, m => ({
+      "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"
+    })[m]);
+  }
+
+  function renderDashboard(list){
+    const decorated = decorate(list);
+    const urgent = sortByDays(decorated.filter(x => x._days <= 7));
+    const el = $("dashList");
+    el.innerHTML = urgent.map(cardHTML).join("");
+    $("dashEmpty").style.display = urgent.length ? "none" : "block";
+    bindCardClicks(el);
+  }
+
+  function renderCertificates(list){
+    const q = $("qDoctor").value.trim().toLowerCase();
+    const decorated = sortByDays(decorate(list));
+    const filtered = q
+      ? decorated.filter(x => (x.doctor || "").toLowerCase().includes(q))
+      : decorated;
+
+    const el = $("certList");
+    el.innerHTML = filtered.map(cardHTML).join("");
+    $("certEmpty").style.display = filtered.length ? "none" : "block";
+    bindCardClicks(el);
+  }
+
+  function bindCardClicks(container){
+    container.querySelectorAll(".cardItem").forEach(card => {
+      const open = () => openModal(card.getAttribute("data-id"));
+      card.addEventListener("click", (e) => {
+        const act = e.target && e.target.getAttribute && e.target.getAttribute("data-act");
+        if(act === "open") open();
+        else if(e.target.tagName !== "BUTTON") open();
+      });
+      card.addEventListener("keydown", (e) => {
+        if(e.key === "Enter" || e.key === " ") open();
+      });
+    });
+  }
+
+  // ===== Modal + Email =====
+  let currentId = null;
+
+  function openModal(id){
+    const list = load();
+    const c = list.find(x => x.id === id);
+    if(!c) return;
+
+    currentId = id;
+
+    const d = parseDateISO(c.expiry);
+    const dr = d ? daysRemaining(d) : 0;
+
+    $("mTitle").textContent = c.name;
+    $("mDoctor").textContent = c.doctor;
+    $("mEmail").textContent = c.email;
+    $("mExpiry").textContent = c.expiry;
+    $("mDays").textContent = (dr < 0 ? `Expired (${Math.abs(dr)} days ago)` : `${dr} days`);
+
+    // Enable/disable buttons based on remaining days
+    $("mFirst").disabled = !(dr <= 30 && dr > 7);
+    $("mUrgent").disabled = !(dr <= 7);
+
+    $("overlay").style.display = "flex";
+  }
+
+  function closeModal(){
+    $("overlay").style.display = "none";
+    currentId = null;
+  }
+
+  function mailtoFor(type, c){
+    const d = parseDateISO(c.expiry);
+    const dr = d ? daysRemaining(d) : 0;
+
+    const subject = (type === "urgent")
+      ? `🚨 Urgent Reminder: ${c.name} Expiring Soon`
+      : `⚠️ First Reminder: ${c.name} Expiring Soon`;
+
+    const bodyLines = [
+      "Hello,",
+      "",
+      type === "urgent"
+        ? `This is an urgent reminder that "${c.name}" will expire very soon:`
+        : `This is a first reminder that "${c.name}" will expire soon:`,
+      "",
+      `📅 Expiration Date: ${c.expiry}`,
+      `⏳ Days Remaining: ${dr} days`,
+      `👤 Doctor: ${c.doctor}`,
+      "",
+      type === "urgent"
+        ? "Please take action immediately."
+        : "Please start the renewal process soon.",
+      "",
+      "This reminder was generated by Certificate Expiration Tracker"
+    ];
+
+    const body = encodeURIComponent(bodyLines.join("\n"));
+    const to = encodeURIComponent(c.email);
+    return `mailto:${to}?subject=${encodeURIComponent(subject)}&body=${body}`;
+  }
+
+  // ===== Navigation =====
+  function showPage(page){
+    $("pageDashboard").classList.toggle("hidden", page !== "dash");
+    $("pageCerts").classList.toggle("hidden", page !== "certs");
+
+    $("navDashboard").classList.toggle("primary", page === "dash");
+    $("navCerts").classList.toggle("primary", page === "certs");
+  }
+
+  // ===== Actions =====
+  function addCertificate(){
+    const name = $("inName").value.trim();
+    const doctor = $("inDoctor").value.trim();
+    const expiry = $("inDate").value.trim();
+    const email = $("inEmail").value.trim();
+
+    if(!name || !doctor || !expiry || !email){
+      toast("Please fill all required fields.");
+      return;
+    }
+    const d = parseDateISO(expiry);
+    if(!d){
+      toast("Invalid date.");
+      return;
+    }
+    if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){
+      toast("Invalid email address.");
+      return;
+    }
+
+    const list = load();
+    list.push({ id: uid(), name, doctor, expiry, email });
+    save(list);
+
+    $("inName").value = "";
+    $("inDoctor").value = "";
+    $("inDate").value = "";
+    $("inEmail").value = "";
+
+    refresh();
+    toast("Certificate added ✅");
+  }
+
+  function clearForm(){
+    $("inName").value = "";
+    $("inDoctor").value = "";
+    $("inDate").value = "";
+    $("inEmail").value = "";
+  }
+
+  function deleteCurrent(){
+    if(!currentId) return;
+    const list = load().filter(x => x.id !== currentId);
+    save(list);
+    closeModal();
+    refresh();
+    toast("Deleted ✅");
+  }
+
+  function exportCSV(){
+    const list = decorate(load());
+    const rows = [
+      ["Certificate Name","Doctor Name","Expiration Date","Email Address","Days Remaining"].join(",")
+    ];
+    list.forEach(c => {
+      rows.push([
+        csvCell(c.name),
+        csvCell(c.doctor),
+        csvCell(c.expiry),
+        csvCell(c.email),
+        csvCell(String(c._days))
+      ].join(","));
+    });
+    const blob = new Blob([rows.join("\n")], {type:"text/csv;charset=utf-8"});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "certificates.csv";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+    toast("CSV downloaded ✅");
+  }
+
+  function csvCell(s){
+    const str = String(s ?? "");
+    if(/[",\n]/.test(str)) return `"${str.replace(/"/g,'""')}"`;
+    return str;
+  }
+
+  function refresh(){
+    const list = load();
+    renderStats(list);
+    renderDashboard(list);
+    renderCertificates(list);
+  }
+
+  // ===== Login flow =====
+  function setLoggedIn(v){
+    if(v) sessionStorage.setItem(SESSION_KEY, "1");
+    else sessionStorage.removeItem(SESSION_KEY);
+  }
+  function isLoggedIn(){
+    return sessionStorage.getItem(SESSION_KEY) === "1";
+  }
+
+  function enterApp(){
+    $("loginView").classList.add("hidden");
+    $("appView").classList.remove("hidden");
+    showPage("dash");
+    refresh();
+  }
+
+  function doLogin(){
+    const pw = $("pw").value.trim();
+    if(pw === PASSWORD){
+      $("loginErr").style.display = "none";
+      setLoggedIn(true);
+      enterApp();
+      toast("Access granted ✅");
+    }else{
+      $("loginErr").style.display = "block";
+    }
+  }
+
+  function logout(){
+    setLoggedIn(false);
+    $("appView").classList.add("hidden");
+    $("loginView").classList.remove("hidden");
+    $("pw").value = "";
+    $("loginErr").style.display = "none";
+    toast("Logged out");
+  }
+
+  // ===== Bind events =====
+  $("loginBtn").addEventListener("click", doLogin);
+  $("pw").addEventListener("keydown", (e) => { if(e.key === "Enter") doLogin(); });
+
+  $("navDashboard").addEventListener("click", () => showPage("dash"));
+  $("navCerts").addEventListener("click", () => { showPage("certs"); refresh(); });
+
+  $("addBtn").addEventListener("click", addCertificate);
+  $("cancelBtn").addEventListener("click", clearForm);
+
+  $("exportBtn").addEventListener("click", exportCSV);
+  $("logoutBtn").addEventListener("click", logout);
+
+  $("qDoctor").addEventListener("input", () => renderCertificates(load()));
+  $("clearSearch").addEventListener("click", () => { $("qDoctor").value=""; renderCertificates(load()); });
+
+  $("mClose").addEventListener("click", closeModal);
+  $("overlay").addEventListener("click", (e) => { if(e.target.id === "overlay") closeModal(); });
+
+  $("mDelete").addEventListener("click", deleteCurrent);
+
+  $("mFirst").addEventListener("click", () => {
+    const list = load();
+    const c = list.find(x => x.id === currentId);
+    if(!c) return;
+    window.location.href = mailtoFor("first", c);
+    toast("Email draft opened ✅");
+  });
+
+  $("mUrgent").addEventListener("click", () => {
+    const list = load();
+    const c = list.find(x => x.id === currentId);
+    if(!c) return;
+    window.location.href = mailtoFor("urgent", c);
+    toast("Email draft opened ✅");
+  });
+
+  // ===== Start =====
+  // IMPORTANT: no service worker registration here to avoid caching issues.
+  if(isLoggedIn()){
+    enterApp();
+  }
+})();
+</script>
+
+</body>
+</html>
