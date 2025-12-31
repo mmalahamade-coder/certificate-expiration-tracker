@@ -2,15 +2,17 @@ name: Build Certificate Tracker
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [ main ]
+  workflow_dispatch:
 
 jobs:
   build:
-    runs-on: ${{ matrix.os }}
-
     strategy:
+      fail-fast: false
       matrix:
         os: [windows-latest, macos-latest]
+
+    runs-on: ${{ matrix.os }}
 
     steps:
       - name: Checkout repository
@@ -22,14 +24,14 @@ jobs:
           node-version: 20
 
       - name: Install dependencies
-  run: npm install
+        run: npm install
 
-- name: Build app
-  run: |
-    npm run dist -- --publish=never
+      - name: Build app
+        run: |
+          npm run dist -- --publish=never
 
-- name: Upload build artifacts
-  uses: actions/upload-artifact@v4
-  with:
-    name: Certificate-Tracker-${{ matrix.os }}
-    path: dist/
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: Certificate-Tracker-${{ matrix.os }}
+          path: dist/
