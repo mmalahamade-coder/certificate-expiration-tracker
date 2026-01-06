@@ -4,8 +4,6 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>All Certificates - Certificate Tracker</title>
-  <link rel="manifest" href="./manifest.json">
-  <meta name="theme-color" content="#4f46e5">
   <style>
     :root{
       --bg:#f4f6ff;
@@ -114,7 +112,7 @@
       white-space:nowrap;
     }
     .badge.first{background:#fef3c7;border-color:#fde68a;color:#92400e}
-    .badge.urgent{background:#fee2e2;border-color:#fecaca;color:#991b1b}
+    .badge.second{background:#fee2e2;border-color:#fecaca;color:#991b1b}
     .right{display:flex; gap:10px; align-items:center; flex-wrap:wrap; justify-content:flex-end}
     .toast{
       position:fixed;
@@ -166,6 +164,7 @@
     }
   </style>
 </head>
+
 <body>
   <div class="wrap">
     <div class="top">
@@ -173,16 +172,13 @@
         <div style="font-size:26px;line-height:1">📋</div>
         <div>
           <h1>All Certificates</h1>
-          <p>Search is by <b>Doctor Name</b>. Reminders are fixed at <b>30</b> & <b>7</b> days. Only one badge shows (7 overrides 30).</p>
+          <p>Search is by <b>Doctor Name</b>. Alerts are fixed at <b>30</b> & <b>7</b> days. Only one badge shows (7 overrides 30).</p>
         </div>
       </div>
       <div class="actions">
         <button class="btn secondary" id="toDash">Dashboard</button>
-        <button class="btn secondary" id="exportBtn">Download Excel (CSV)</button>
-        <label class="btn secondary" style="cursor:pointer">
-          Import CSV
-          <input id="importFile" type="file" accept=".csv" style="display:none">
-        </label>
+        <button class="btnMini" id="smartDataBtn" type="button">Import / Export</button>
+        <input id="smartDataFile" type="file" accept=".csv,.json,text/csv,application/json" style="display:none">
         <button class="btn" id="logout">Logout</button>
       </div>
     </div>
@@ -190,12 +186,7 @@
     <div class="panel">
       <div class="searchRow">
         <input id="q" placeholder="Search by Doctor Name..." />
-        <button class="btnMini" id="clearSearch">Clear</button> 
-        <button class="btnMini" id="clearSearch">Clear</button>
-        <button type="button" class="btnMini" onclick="dataMenu()">Import / Export</button>
-        <button class="btnMini" id="smartDataBtn">Import / Export</button>
-<input id="smartDataFile" type="file" accept=".csv,.json,text/csv,application/json" style="display:none">
-<input id="dataFile" type="file" accept=".csv,.json,text/csv,application/json" class="hidden">
+        <button class="btnMini" id="clearSearch" type="button">Clear</button>
       </div>
 
       <div class="list" id="list"></div>
@@ -220,10 +211,14 @@
   </div>
 
 <script>
+(() => {
+  // ===== Auth guard =====
   if (sessionStorage.getItem('ct_logged_in') !== '1') {
     window.location.href = './index.html';
+    return;
   }
 
+  // ===== Storage key (ثابت وواضح) =====
   const KEY = 'ct_certs_v1';
 
   function readCerts(){
@@ -239,64 +234,70 @@
     const d = new Date(isoDate + 'T00:00:00');
     return Math.ceil((d - today) / (1000*60*60*24));
   }
+
   function formatISOToMDY(iso){
     const d = new Date(iso + 'T00:00:00');
     return (d.getMonth()+1) + '/' + d.getDate() + '/' + d.getFullYear();
   }
+
+  // ✅ بدل Urgent صارت Second Alert
   function badgeFor(dl){
-    if (dl <= 7) return {cls:'urgent', text:`🚨 Urgent (${dl}d)`};
+    if (dl <= 7) return {cls:'second', text:`🚨 Second Alert (${dl}d)`};
     if (dl <= 30) return {cls:'first', text:`⚠️ First Alert (${dl}d)`};
     return null;
   }
+
   function escapeHtml(s){
     return String(s || '').replace(/[&<>"']/g, (m)=>({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[m]));
   }
 
-  const toast = document.getElementById('toast');
+  // ===== Toast =====
+  const toastEl = document.getElementById('toast');
   let toastT=null;
   function showToast(msg){
-    toast.textContent = msg;
-    toast.style.display = 'block';
+    toastEl.textContent = msg;
+    toastEl.style.display = 'block';
     clearTimeout(toastT);
-    toastT = setTimeout(()=> toast.style.display='none', 2600);
+    toastT = setTimeout(()=> toastEl.style.display='none', 2600);
   }
 
+  // ===== Safe open mailto (Browser + Electron) =====
+  function openExternalMaybe(href){
+    // لو عندك preload يعرّف window.electronAPI.openExternal
+    if (window.electronAPI && typeof window.electronAPI.openExternal === "function") {
+      window.electronAPI.openExternal(href);
+      return;
+    }
+    window.location.href = href;
+  }
+
+  // ✅ بناء الإيميل: First / Second
   function buildEmail(cert, dl){
-    const isUrgent = dl <= 7;
-    const subject = isUrgent
-      ? `🚨 Urgent Reminder: ${cert.name} Expiring Soon`
-      : `⚠️ First Reminder: ${cert.name} Expiring Soon`;
+    const isSecond = dl <= 7;
+
+    const subject = isSecond
+      ? `Second Reminder: ${cert.name} Expiring Soon`
+      : `First Reminder: ${cert.name} Expiring Soon`;
 
     const lines = [
       "Hello,",
       "",
-      `This is a ${isUrgent ? "urgent reminder" : "first reminder"} that "${cert.name}" will expire soon:`,
+      isSecond
+        ? `This is a second reminder that "${cert.name}" will expire very soon:`
+        : `This is a first reminder that "${cert.name}" will expire soon:`,
       "",
       `📅 Expiration Date: ${formatISOToMDY(cert.expiry)}`,
       `⏳ Days Remaining: ${dl} day${dl===1?"":"s"}`,
       `👩‍⚕️ Doctor: ${cert.doctor}`,
       "",
-      isUrgent
+      isSecond
         ? "Please renew as soon as possible."
-        : "Note: You will receive an urgent reminder 7 days before expiration.",
+        : "Note: You will receive a second reminder 7 days before expiration.",
       "",
       "This reminder was prepared by Certificate Expiration Tracker"
     ];
-    return {subject, body: lines.join("\n")};
-  }
 
-  function openMail(cert){
-    const dl = daysLeft(cert.expiry);
-    const {subject, body} = buildEmail(cert, dl);
-    const href = `mailto:${encodeURIComponent(cert.email)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-    window.location.href = href;
-
-    cert.mailPreparedAt = new Date().toISOString();
-    cert.mailPreparedKind = (dl <= 7) ? 'urgent' : (dl <= 30 ? 'first' : 'none');
-    saveOne(cert);
-
-    showToast("Email draft opened ✅");
-    render();
+    return { subject, body: lines.join("\n"), kind: (isSecond ? 'second' : 'first') };
   }
 
   function saveOne(updated){
@@ -308,7 +309,30 @@
     }
   }
 
-  // ---- Render list + search by doctor ----
+  // ✅ هذا اللي يثبت Email prepared
+  function openMail(cert){
+    const dl = daysLeft(cert.expiry);
+
+    // فقط خلال 30 يوم
+    if (!(dl <= 30)) {
+      showToast("No alert needed (more than 30 days).");
+      return;
+    }
+
+    const {subject, body, kind} = buildEmail(cert, dl);
+    const href = `mailto:${encodeURIComponent(cert.email)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+
+    openExternalMaybe(href);
+
+    cert.mailPreparedAt = new Date().toISOString();
+    cert.mailPreparedKind = kind;
+    saveOne(cert);
+
+    showToast("Email draft opened ✅");
+    render();
+  }
+
+  // ===== Render list + search by doctor =====
   const q = document.getElementById('q');
   const listEl = document.getElementById('list');
   const empty = document.getElementById('empty');
@@ -335,7 +359,11 @@
       div.innerHTML = `
         <div class="left">
           <strong>${escapeHtml(c.name)}</strong>
-          <div class="meta">Expiry: ${escapeHtml(formatISOToMDY(c.expiry))} • Email: ${escapeHtml(c.email)} • Doctor: ${escapeHtml(c.doctor)}${prepared}</div>
+          <div class="meta">
+            Expiry: ${escapeHtml(formatISOToMDY(c.expiry))}
+            • Email: ${escapeHtml(c.email)}
+            • Doctor: ${escapeHtml(c.doctor)}${prepared}
+          </div>
         </div>
         <div class="right">
           ${badgeHtml}
@@ -348,21 +376,23 @@
   }
 
   q.addEventListener('input', render);
-  document.getElementById('clearSearch').addEventListener('click', ()=>{ q.value=''; render(); });
+  document.getElementById('clearSearch').addEventListener('click', ()=>{
+    q.value='';
+    render();
+  });
 
-  // ---- Modal ----
+  // ===== Modal =====
   const mb = document.getElementById('mb');
   const mTitle = document.getElementById('mTitle');
   const mBody = document.getElementById('mBody');
   const mClose = document.getElementById('mClose');
   const sendBtn = document.getElementById('sendBtn');
   const deleteBtn = document.getElementById('deleteBtn');
-  let modalId = null;
 
   function openModal(id){
     const cert = readCerts().find(c => c.id === id);
     if(!cert) return;
-    modalId = id;
+
     const dl = daysLeft(cert.expiry);
     const b = badgeFor(dl);
 
@@ -372,14 +402,14 @@
       <div><b>Email:</b> ${escapeHtml(cert.email)}</div>
       <div><b>Expiration Date:</b> ${escapeHtml(formatISOToMDY(cert.expiry))}</div>
       <div><b>Days Remaining:</b> ${dl}</div>
-      <div><b>Status:</b> ${b ? escapeHtml(b.text.replace(/^[^A-Za-z0-9]+/,'').trim()) : "Active"}</div>
+      <div><b>Status:</b> ${b ? escapeHtml(b.text) : "Active"}</div>
       ${cert.mailPreparedAt ? `<div style="margin-top:10px;color:#16a34a;font-weight:900">✅ Email prepared</div>` : ``}
     `;
 
-    // Only send if within 30 days (first) or 7 days (urgent)
+    // ✅ زر واحد: First أو Second
     sendBtn.disabled = !(dl <= 30);
     sendBtn.style.opacity = sendBtn.disabled ? .5 : 1;
-    sendBtn.textContent = dl <= 7 ? "Send Urgent Email" : (dl <= 30 ? "Send First Alert Email" : "Send Email");
+    sendBtn.textContent = (dl <= 7) ? "Send Second Alert Email" : (dl <= 30 ? "Send First Alert Email" : "Send Email");
 
     sendBtn.onclick = ()=>{
       const fresh = readCerts().find(c => c.id === id);
@@ -396,163 +426,14 @@
 
     mb.style.display = 'flex';
   }
-  function closeModal(){ mb.style.display='none'; modalId=null; }
+
+  function closeModal(){ mb.style.display='none'; }
   mClose.addEventListener('click', closeModal);
   mb.addEventListener('click', (e)=>{ if(e.target === mb) closeModal(); });
 
-  // ---- Export / Import CSV ----
-  function exportCSV(){
-    const list = readCerts();
-    const header = ["Certificate Name","Doctor Name","Expiration Date (YYYY-MM-DD)","Email Address"];
-    const rows = list.map(c => [
-      safeCSV(c.name),
-      safeCSV(c.doctor),
-      safeCSV(c.expiry),
-      safeCSV(c.email)
-    ].join(","));
-    const csv = [header.join(","), ...rows].join("\n");
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(new Blob([csv], {type:'text/csv;charset=utf-8'}));
-    a.download = "certificates.csv";
-    a.click();
-    showToast("CSV downloaded ✅");
-  }
-  function safeCSV(v){
-    const s = String(v ?? "");
-    if(/[,"\n]/.test(s)) return '"' + s.replace(/"/g,'""') + '"';
-    return s;
-  }
-
-  document.getElementById('exportBtn').addEventListener('click', exportCSV);
-
-  document.getElementById('importFile').addEventListener('change', async (e)=>{
-    const file = e.target.files && e.target.files[0];
-    if(!file) return;
-    const text = await file.text();
-    const lines = text.split(/\r?\n/).filter(Boolean);
-    if(lines.length < 2){ showToast("CSV is empty."); return; }
-
-    // Expect: Certificate Name, Doctor Name, Expiration Date (YYYY-MM-DD), Email Address
-    const dataLines = lines.slice(1);
-
-    const current = readCerts();
-    const add = [];
-
-    for(const line of dataLines){
-      const cols = parseCSVLine(line);
-      if(cols.length < 4) continue;
-      const name = (cols[0]||'').trim();
-      const doctor = (cols[1]||'').trim();
-      const expiry = (cols[2]||'').trim();
-      const email = (cols[3]||'').trim();
-      if(!name || !doctor || !expiry || !email) continue;
-
-      add.push({
-        id: 'c_' + Math.random().toString(16).slice(2) + Date.now().toString(16),
-        name, doctor, expiry, email,
-        createdAt: new Date().toISOString()
-      });
-    }
-
-    writeCerts([...current, ...add]);
-    showToast(`Imported ${add.length} certificate(s) ✅`);
-    e.target.value = '';
-    render();
-  });
-
-  function parseCSVLine(line){
-    const out = [];
-    let cur = '';
-    let inQ = false;
-    for(let i=0;i<line.length;i++){
-      const ch = line[i];
-      if(inQ){
-        if(ch === '"' && line[i+1] === '"'){ cur += '"'; i++; }
-        else if(ch === '"'){ inQ = false; }
-        else cur += ch;
-      } else {
-        if(ch === '"') inQ = true;
-        else if(ch === ','){ out.push(cur); cur=''; }
-        else cur += ch;
-      }
-    }
-    out.push(cur);
-    return out;
-  }
-
-  // ---- Nav ----
-  document.getElementById('toDash').addEventListener('click', ()=> window.location.href='./dashboard.html');
-  document.getElementById('logout').addEventListener('click', ()=>{
-    sessionStorage.removeItem('ct_logged_in');
-    window.location.href='./index.html';
-  });
-
-  // Initial
-  render();
-  <script>
-document.getElementById("dataBtn").addEventListener("click", () => {
-  const choice = confirm(
-    "OK = Export data\nCancel = Import data"
-  );
-
-  if (choice) {
-    exportData();
-  } else {
-    document.getElementById("dataFile").click();
-  }
-});
-
-document.getElementById("dataFile").addEventListener("change", (e) => {
-  const file = e.target.files[0];
-  if (!file) return;
-
-  const reader = new FileReader();
-  reader.onload = () => {
-    try {
-      const data = JSON.parse(reader.result);
-      localStorage.setItem("certificates", JSON.stringify(data));
-      alert("Data imported successfully");
-      location.reload();
-    } catch {
-      alert("Invalid file");
-    }
-  };
-  reader.readAsText(file);
-});
-
-function exportData() {
-  const data = localStorage.getItem("certificates") || "[]";
-  const blob = new Blob([data], { type: "application/json" });
-  const a = document.createElement("a");
-  a.href = URL.createObjectURL(blob);
-  a.download = "certificates_backup.json";
-  a.click();
-}
-</script>
-
-</script> 
-<script>
-(() => {
-  // ✅ اكتشاف مفتاح التخزين الصحيح تلقائياً
-  const CANDIDATE_KEYS = ["certTracker_v3", "certificates"];
-  function detectKey() {
-    for (const k of CANDIDATE_KEYS) {
-      try {
-        const v = JSON.parse(localStorage.getItem(k) || "[]");
-        if (Array.isArray(v)) return k;
-      } catch {}
-    }
-    return "certTracker_v3"; // افتراضي
-  }
-  const STORAGE_KEY = detectKey();
-
-  function loadList(){
-    try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]"); }
-    catch { return []; }
-  }
-  function saveList(list){
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(list));
-  }
+  // ===== Smart Import / Export (CSV أو JSON) =====
+  const smartBtn = document.getElementById("smartDataBtn");
+  const smartFile = document.getElementById("smartDataFile");
 
   function download(filename, text, mime){
     const blob = new Blob([text], { type: mime });
@@ -566,29 +447,28 @@ function exportData() {
     setTimeout(()=>URL.revokeObjectURL(url), 300);
   }
 
-  // CSV helpers (بسيطة وتكفي)
   const esc = (s) => {
     const v = String(s ?? "");
     return /[",\n]/.test(v) ? `"${v.replace(/"/g,'""')}"` : v;
   };
 
   function exportCSV(list){
-    // نحاول نصدّر بأكثر أعمدة شائعة (بدون كسر)
-    const headers = ["id","name","doctor","expiry","email"];
     const rows = [
-      ["Certificate Name","Doctor Name","Expiration Date","Email Address"].join(","),
+      ["Certificate Name","Doctor Name","Expiration Date (YYYY-MM-DD)","Email Address"].join(","),
       ...list.map(o => [
-        esc(o.name ?? o.certificateName ?? ""),
-        esc(o.doctor ?? o.doctorName ?? ""),
-        esc(o.expiry ?? o.expiryDate ?? o.expirationDate ?? ""),
-        esc(o.email ?? o.emailAddress ?? "")
+        esc(o.name ?? ""),
+        esc(o.doctor ?? ""),
+        esc(o.expiry ?? ""),
+        esc(o.email ?? "")
       ].join(","))
     ];
     download("certificates.csv", rows.join("\n"), "text/csv;charset=utf-8");
+    showToast("CSV downloaded ✅");
   }
 
   function exportJSON(list){
     download("certificates.json", JSON.stringify(list, null, 2), "application/json;charset=utf-8");
+    showToast("JSON downloaded ✅");
   }
 
   function parseCSV(text){
@@ -611,16 +491,20 @@ function exportData() {
     return rows.filter(r => r.some(x => String(x).trim() !== ""));
   }
 
+  function makeId(){
+    return 'c_' + Math.random().toString(16).slice(2) + Date.now().toString(16);
+  }
+
   function normalizeImported(arr){
-    const makeId = () => (Math.random().toString(16).slice(2) + Date.now().toString(16));
     return (arr || []).map(x => {
       const o = (x && typeof x === "object") ? x : {};
       return {
         id: o.id || makeId(),
-        name: (o.name ?? o.certificateName ?? o["Certificate Name"] ?? "").toString().trim(),
-        doctor: (o.doctor ?? o.doctorName ?? o["Doctor Name"] ?? "").toString().trim(),
-        expiry: (o.expiry ?? o.expiryDate ?? o.expirationDate ?? o["Expiration Date"] ?? "").toString().trim(),
-        email: (o.email ?? o.emailAddress ?? o["Email Address"] ?? "").toString().trim(),
+        name: String(o.name ?? o.certificateName ?? o["Certificate Name"] ?? "").trim(),
+        doctor: String(o.doctor ?? o.doctorName ?? o["Doctor Name"] ?? "").trim(),
+        expiry: String(o.expiry ?? o.expirationDate ?? o["Expiration Date (YYYY-MM-DD)"] ?? o["Expiration Date"] ?? "").trim(),
+        email: String(o.email ?? o.emailAddress ?? o["Email Address"] ?? "").trim(),
+        createdAt: o.createdAt || new Date().toISOString()
       };
     }).filter(x => x.name && x.doctor && x.expiry && x.email);
   }
@@ -628,40 +512,23 @@ function exportData() {
   async function importFile(file){
     const text = await file.text();
     const ext = (file.name.split(".").pop() || "").toLowerCase();
-    let incoming = [];
 
+    let incoming = [];
     try{
       if(ext === "json" || text.trim().startsWith("[")){
         const json = JSON.parse(text);
         incoming = normalizeImported(Array.isArray(json) ? json : []);
       }else{
         const rows = parseCSV(text);
-        if(!rows.length) throw new Error("Empty CSV");
-        const header = rows[0].map(s => String(s).trim().toLowerCase());
-        const hasHeader = header.some(h => h.includes("doctor") || h.includes("certificate") || h.includes("email") || h.includes("expir"));
-
-        let start = 0;
-        let idx = { name:0, doctor:1, expiry:2, email:3 };
-
-        if(hasHeader){
-          start = 1;
-          const find = (keys)=>header.findIndex(h=>keys.some(k=>h.includes(k)));
-          idx.name = Math.max(0, find(["certificate","name"]));
-          idx.doctor = Math.max(0, find(["doctor"]));
-          idx.expiry = Math.max(0, find(["expir","expiry","expiration"]));
-          idx.email = Math.max(0, find(["email"]));
-        }
-
-        const data = [];
-        for(let i=start;i<rows.length;i++){
-          const r = rows[i];
-          data.push({
-            name: r[idx.name] ?? "",
-            doctor: r[idx.doctor] ?? "",
-            expiry: r[idx.expiry] ?? "",
-            email: r[idx.email] ?? ""
-          });
-        }
+        if(rows.length < 2) throw new Error("Empty CSV");
+        // نفترض الهيدر موجود مثل ما نصدره
+        const dataLines = rows.slice(1);
+        const data = dataLines.map(r => ({
+          name: r[0] ?? "",
+          doctor: r[1] ?? "",
+          expiry: r[2] ?? "",
+          email: r[3] ?? ""
+        }));
         incoming = normalizeImported(data);
       }
     }catch(e){
@@ -669,39 +536,44 @@ function exportData() {
       return;
     }
 
-    // دمج بالـ id إذا موجود
-    const existing = loadList();
+    const existing = readCerts();
     const map = new Map(existing.map(x => [x.id, x]));
     for (const it of incoming) map.set(it.id, { ...map.get(it.id), ...it });
-    saveList([...map.values()]);
 
+    writeCerts([...map.values()]);
     alert(`Imported ${incoming.length} item(s) ✅`);
-    location.reload();
+    render();
   }
 
-  // ✅ زر واحد ذكي
-  const btn = document.getElementById("smartDataBtn");
-  const fileInput = document.getElementById("smartDataFile");
-
-  if(btn && fileInput){
-    btn.addEventListener("click", () => {
+  if(smartBtn && smartFile){
+    smartBtn.addEventListener("click", () => {
       const doExport = confirm("OK = Export\nCancel = Import");
       if(doExport){
         const asCSV = confirm("OK = CSV\nCancel = JSON");
-        const list = loadList();
+        const list = readCerts();
         if(asCSV) exportCSV(list);
         else exportJSON(list);
       }else{
-        fileInput.value = "";
-        fileInput.click();
+        smartFile.value = "";
+        smartFile.click();
       }
     });
 
-    fileInput.addEventListener("change", (e) => {
+    smartFile.addEventListener("change", (e) => {
       const f = e.target.files && e.target.files[0];
       if(f) importFile(f);
     });
   }
+
+  // ===== Nav =====
+  document.getElementById('toDash').addEventListener('click', ()=> window.location.href='./dashboard.html');
+  document.getElementById('logout').addEventListener('click', ()=>{
+    sessionStorage.removeItem('ct_logged_in');
+    window.location.href='./index.html';
+  });
+
+  // ===== Start =====
+  render();
 })();
 </script>
 
