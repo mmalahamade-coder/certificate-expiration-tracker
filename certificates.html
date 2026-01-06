@@ -4,6 +4,10 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>All Certificates - Certificate Tracker</title>
+
+  <link rel="manifest" href="./manifest.json">
+  <meta name="theme-color" content="#4f46e5">
+
   <style>
     :root{
       --bg:#f4f6ff;
@@ -16,6 +20,9 @@
       --border:#e5e7eb;
       --shadow: 0 18px 45px rgba(15,23,42,.12);
       --radius: 18px;
+      --ok:#16a34a;
+      --okbg:#dcfce7;
+      --okbd:#86efac;
     }
     *{box-sizing:border-box}
     body{
@@ -41,15 +48,14 @@
     }
     .brand{display:flex; gap:10px; align-items:flex-start}
     .brand h1{margin:0;font-size:26px;line-height:1.1}
-    .brand p{margin:4px 0 0 0;color:var(--muted);font-size:13px}
-    .actions{display:flex; gap:10px; align-items:center; flex-wrap:wrap}
+    .actions{display:flex; gap:10px; align-items:center; flex-wrap:wrap; justify-content:flex-end}
     .btn{
       border:1px solid var(--border);
       background:#0b1220;
       color:white;
       padding:10px 14px;
       border-radius:14px;
-      font-weight:700;
+      font-weight:800;
       cursor:pointer;
     }
     .btn.secondary{background:white;color:var(--text)}
@@ -68,9 +74,9 @@
       gap:10px;
       align-items:center;
       flex-wrap:wrap;
-      margin-top:8px;
+      margin-top:6px;
     }
-    input{
+    input[type="text"]{
       flex:1;
       min-width:260px;
       padding:11px 12px;
@@ -80,14 +86,15 @@
       font-size:14px;
       background:white;
     }
-    input:focus{border-color:#c7d2fe; box-shadow:0 0 0 4px rgba(79,70,229,.12)}
+    input[type="text"]:focus{border-color:#c7d2fe; box-shadow:0 0 0 4px rgba(79,70,229,.12)}
     .btnMini{
       border:none; cursor:pointer;
       padding:11px 12px;
       border-radius:12px;
-      font-weight:800;
+      font-weight:900;
       background:#eef2ff;
       color:#1e293b;
+      white-space:nowrap;
     }
     .list{display:grid; gap:12px; margin-top:14px}
     .item{
@@ -100,19 +107,29 @@
       align-items:center;
       background:#fff;
     }
+    .left{min-width:0}
     .left strong{display:block;font-size:16px}
-    .left .meta{margin-top:4px;color:var(--muted);font-size:13px;line-height:1.35}
+    .left .meta{
+      margin-top:4px;
+      color:var(--muted);
+      font-size:13px;
+      line-height:1.35;
+      white-space:nowrap;
+      overflow:hidden;
+      text-overflow:ellipsis;
+    }
     .badge{
       display:inline-flex; gap:8px; align-items:center;
       padding:6px 10px;
       border-radius:999px;
-      font-weight:800;
+      font-weight:900;
       font-size:12px;
       border:1px solid;
       white-space:nowrap;
     }
     .badge.first{background:#fef3c7;border-color:#fde68a;color:#92400e}
     .badge.second{background:#fee2e2;border-color:#fecaca;color:#991b1b}
+    .badge.sent{background:var(--okbg);border-color:var(--okbd);color:#14532d}
     .right{display:flex; gap:10px; align-items:center; flex-wrap:wrap; justify-content:flex-end}
     .toast{
       position:fixed;
@@ -124,9 +141,9 @@
       border-radius:14px;
       box-shadow: var(--shadow);
       display:none;
-      font-weight:700;
+      font-weight:900;
       font-size:13px;
-      max-width: min(420px, 92vw);
+      max-width: min(520px, 92vw);
     }
     .modalBackdrop{
       position:fixed; inset:0;
@@ -137,7 +154,7 @@
       padding:18px;
     }
     .modal{
-      width:min(640px, 94vw);
+      width:min(680px, 94vw);
       background:white;
       border-radius:20px;
       border:1px solid var(--border);
@@ -150,18 +167,19 @@
     }
     .modalTop h3{margin:0;font-size:18px}
     .close{
-      border:none;background:#f1f5f9;border-radius:12px;padding:8px 10px;cursor:pointer;font-weight:800
+      border:none;background:#f1f5f9;border-radius:12px;padding:8px 10px;cursor:pointer;font-weight:900
     }
-    .kv{margin-top:8px; color:#1f2937; font-size:14px; line-height:1.5}
+    .kv{margin-top:8px; color:#1f2937; font-size:14px; line-height:1.6}
     .kv b{color:#0f172a}
     .dangerBtn{
       border:none; cursor:pointer;
       padding:10px 12px;
       border-radius:12px;
-      font-weight:900;
+      font-weight:950;
       background:#fee2e2;
       color:#991b1b;
     }
+    .hint{color:var(--muted); font-weight:800; font-size:12px; margin:0}
   </style>
 </head>
 
@@ -172,25 +190,28 @@
         <div style="font-size:26px;line-height:1">📋</div>
         <div>
           <h1>All Certificates</h1>
-          <p>Search is by <b>Doctor Name</b>. Alerts are fixed at <b>30</b> & <b>7</b> days. Only one badge shows (7 overrides 30).</p>
+          <p class="hint">Search by Doctor Name • Fixed alerts: 30 & 7 days (only one badge shown)</p>
         </div>
       </div>
+
       <div class="actions">
-        <button class="btn secondary" id="toDash">Dashboard</button>
-        <button class="btnMini" id="smartDataBtn" type="button">Import / Export</button>
+        <button class="btn secondary" id="toDash" type="button">Dashboard</button>
+
+        <button class="btn secondary" id="smartDataBtn" type="button">Import / Export</button>
         <input id="smartDataFile" type="file" accept=".csv,.json,text/csv,application/json" style="display:none">
-        <button class="btn" id="logout">Logout</button>
+
+        <button class="btn" id="logout" type="button">Logout</button>
       </div>
     </div>
 
     <div class="panel">
       <div class="searchRow">
-        <input id="q" placeholder="Search by Doctor Name..." />
+        <input id="q" type="text" placeholder="Search by Doctor Name..." />
         <button class="btnMini" id="clearSearch" type="button">Clear</button>
       </div>
 
       <div class="list" id="list"></div>
-      <div id="empty" style="display:none;color:#64748b;margin-top:12px">No certificates found.</div>
+      <div id="empty" style="display:none;color:#64748b;margin-top:12px;font-weight:800">No certificates found.</div>
     </div>
   </div>
 
@@ -200,91 +221,123 @@
     <div class="modal">
       <div class="modalTop">
         <h3 id="mTitle">Certificate</h3>
-        <button class="close" id="mClose">✕</button>
+        <button class="close" id="mClose" type="button">✕</button>
       </div>
+
       <div id="mBody" class="kv"></div>
+
       <div style="display:flex; gap:10px; margin-top:14px; flex-wrap:wrap">
-        <button class="btn" id="sendBtn">Send Email§</button>
-        <button class="dangerBtn" id="deleteBtn">Delete</button>
+        <button class="btn" id="sendBtn" type="button">Send Email</button>
+        <button class="dangerBtn" id="deleteBtn" type="button">Delete</button>
       </div>
     </div>
   </div>
 
 <script>
 (() => {
-  // ===== Auth guard =====
-  if (sessionStorage.getItem('ct_logged_in') !== '1') {
-    window.location.href = './index.html';
+  // ====== LOGIN CHECK (supports old + new keys) ======
+  const SESSION_KEYS = ["ct_logged_in", "certTracker_loggedIn", "certTracker_loggedIn_v1", "certTracker_loggedIn_v3"];
+  function isLoggedIn(){
+    return SESSION_KEYS.some(k => sessionStorage.getItem(k) === "1");
+  }
+  if (!isLoggedIn()) {
+    window.location.href = "./index.html";
     return;
   }
 
-  // ===== Storage key (ثابت وواضح) =====
-  const KEY = 'ct_certs_v1';
+  // ====== STORAGE KEY AUTO-DETECT (supports old + new apps) ======
+  const CANDIDATE_KEYS = ["ct_certs_v1", "certTracker_v3", "certificates"];
+  function detectStorageKey() {
+    for (const k of CANDIDATE_KEYS) {
+      try {
+        const v = JSON.parse(localStorage.getItem(k) || "[]");
+        if (Array.isArray(v)) return k;
+      } catch {}
+    }
+    return "ct_certs_v1";
+  }
+  const STORAGE_KEY = detectStorageKey();
 
   function readCerts(){
-    try { return JSON.parse(localStorage.getItem(KEY) || '[]'); }
-    catch { return []; }
+    try {
+      const v = JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
+      return Array.isArray(v) ? v : [];
+    } catch {
+      return [];
+    }
   }
   function writeCerts(list){
-    localStorage.setItem(KEY, JSON.stringify(list));
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(list));
+  }
+  function uid(){
+    return "c_" + Math.random().toString(16).slice(2) + Date.now().toString(16);
   }
 
-  function daysLeft(isoDate){
-    const today = new Date(); today.setHours(0,0,0,0);
-    const d = new Date(isoDate + 'T00:00:00');
-    return Math.ceil((d - today) / (1000*60*60*24));
+  // Normalize any old records
+  function normalize(list){
+    return (list || []).map(x => {
+      const o = (x && typeof x === "object") ? x : {};
+      return {
+        id: o.id || uid(),
+        name: String(o.name ?? o.certificateName ?? o["Certificate Name"] ?? "").trim(),
+        doctor: String(o.doctor ?? o.doctorName ?? o["Doctor Name"] ?? "").trim(),
+        expiry: String(o.expiry ?? o.expiryDate ?? o.expirationDate ?? o["Expiration Date"] ?? o["Expiration Date (YYYY-MM-DD)"] ?? "").trim(),
+        email: String(o.email ?? o.emailAddress ?? o["Email Address"] ?? "").trim(),
+        // NEW: track email status
+        mailSentAt: o.mailSentAt || null,
+        mailSentKind: o.mailSentKind || null,
+        createdAt: o.createdAt || null
+      };
+    }).filter(x => x.name && x.doctor && x.expiry && x.email);
   }
 
-  function formatISOToMDY(iso){
-    const d = new Date(iso + 'T00:00:00');
-    return (d.getMonth()+1) + '/' + d.getDate() + '/' + d.getFullYear();
-  }
-
-  // ✅ بدل Urgent صارت Second Alert
-  function badgeFor(dl){
-    if (dl <= 7) return {cls:'second', text:`🚨 Second Alert (${dl}d)`};
-    if (dl <= 30) return {cls:'first', text:`⚠️ First Alert (${dl}d)`};
-    return null;
-  }
+  // ====== HELPERS ======
+  const $ = (id) => document.getElementById(id);
 
   function escapeHtml(s){
     return String(s || '').replace(/[&<>"']/g, (m)=>({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[m]));
   }
 
-  // ===== Toast =====
-  const toastEl = document.getElementById('toast');
+  function daysLeft(isoDate){
+    const today = new Date(); today.setHours(0,0,0,0);
+    const d = new Date(String(isoDate).trim() + "T00:00:00");
+    if (isNaN(d.getTime())) return 999999;
+    return Math.ceil((d - today) / (1000*60*60*24));
+  }
+
+  function formatISOToMDY(iso){
+    const d = new Date(String(iso).trim() + "T00:00:00");
+    if (isNaN(d.getTime())) return String(iso || "");
+    return (d.getMonth()+1) + "/" + d.getDate() + "/" + d.getFullYear();
+  }
+
+  function badgeFor(dl){
+    // ONLY ONE badge: 7 overrides 30
+    if (dl <= 7) return {cls:'second', text:`🚨 Second Alert (${dl}d)`};
+    if (dl <= 30) return {cls:'first', text:`⚠️ First Alert (${dl}d)`};
+    return null;
+  }
+
+  const toastEl = $("toast");
   let toastT=null;
   function showToast(msg){
     toastEl.textContent = msg;
-    toastEl.style.display = 'block';
+    toastEl.style.display = "block";
     clearTimeout(toastT);
-    toastT = setTimeout(()=> toastEl.style.display='none', 2600);
+    toastT = setTimeout(()=> toastEl.style.display="none", 2400);
   }
 
-  // ===== Safe open mailto (Browser + Electron) =====
-  function openExternalMaybe(href){
-    // لو عندك preload يعرّف window.electronAPI.openExternal
-    if (window.electronAPI && typeof window.electronAPI.openExternal === "function") {
-      window.electronAPI.openExternal(href);
-      return;
-    }
-    window.location.href = href;
-  }
-
-  // ✅ بناء الإيميل: First / Second
+  // ====== EMAIL ======
   function buildEmail(cert, dl){
     const isSecond = dl <= 7;
-
     const subject = isSecond
-      ? `Second Reminder: ${cert.name} Expiring Soon`
-      : `First Reminder: ${cert.name} Expiring Soon`;
+      ? `🚨 Second Alert: ${cert.name} Expiring Soon`
+      : `⚠️ First Alert: ${cert.name} Expiring Soon`;
 
     const lines = [
       "Hello,",
       "",
-      isSecond
-        ? `This is a second reminder that "${cert.name}" will expire very soon:`
-        : `This is a first reminder that "${cert.name}" will expire soon:`,
+      `This is a ${isSecond ? "second alert" : "first alert"} that "${cert.name}" will expire soon:`,
       "",
       `📅 Expiration Date: ${formatISOToMDY(cert.expiry)}`,
       `⏳ Days Remaining: ${dl} day${dl===1?"":"s"}`,
@@ -292,16 +345,15 @@
       "",
       isSecond
         ? "Please renew as soon as possible."
-        : "Note: You will receive a second reminder 7 days before expiration.",
+        : "Note: You will receive a second alert 7 days before expiration.",
       "",
       "This reminder was prepared by Certificate Expiration Tracker"
     ];
-
-    return { subject, body: lines.join("\n"), kind: (isSecond ? 'second' : 'first') };
+    return { subject, body: lines.join("\n") };
   }
 
   function saveOne(updated){
-    const list = readCerts();
+    const list = normalize(readCerts());
     const i = list.findIndex(x => x.id === updated.id);
     if (i >= 0){
       list[i] = updated;
@@ -309,37 +361,30 @@
     }
   }
 
-  // ✅ هذا اللي يثبت Email prepared
   function openMail(cert){
     const dl = daysLeft(cert.expiry);
-
-    // فقط خلال 30 يوم
-    if (!(dl <= 30)) {
-      showToast("No alert needed (more than 30 days).");
-      return;
-    }
-
-    const {subject, body, kind} = buildEmail(cert, dl);
+    const {subject, body} = buildEmail(cert, dl);
     const href = `mailto:${encodeURIComponent(cert.email)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+    window.location.href = href;
 
-    openExternalMaybe(href);
-
-    cert.mailPreparedAt = new Date().toISOString();
-    cert.mailPreparedKind = kind;
+    // Mark as sent (best possible in a mailto-based app)
+    cert.mailSentAt = new Date().toISOString();
+    cert.mailSentKind = (dl <= 7) ? "second" : (dl <= 30 ? "first" : "none");
     saveOne(cert);
 
-    showToast("Email draft opened ✅");
+    showToast("Email sent ✅");
     render();
   }
 
-  // ===== Render list + search by doctor =====
-  const q = document.getElementById('q');
-  const listEl = document.getElementById('list');
-  const empty = document.getElementById('empty');
+  // ====== RENDER ======
+  const q = $("q");
+  const listEl = $("list");
+  const empty = $("empty");
 
   function render(){
     const query = (q.value || '').trim().toLowerCase();
-    let list = readCerts()
+
+    let list = normalize(readCerts())
       .map(c => ({...c, dl: daysLeft(c.expiry)}))
       .sort((a,b)=> a.dl - b.dl);
 
@@ -347,93 +392,101 @@
       list = list.filter(c => (c.doctor||'').toLowerCase().includes(query));
     }
 
-    listEl.innerHTML = '';
-    empty.style.display = list.length ? 'none' : 'block';
+    listEl.innerHTML = "";
+    empty.style.display = list.length ? "none" : "block";
 
     list.forEach(c=>{
       const b = badgeFor(c.dl);
-      const badgeHtml = b ? `<span class="badge ${b.cls}">${b.text}</span>` : '';
-      const prepared = c.mailPreparedAt ? ' • ✅ Email prepared' : '';
-      const div = document.createElement('div');
-      div.className = 'item';
+      const badgeHtml = b ? `<span class="badge ${b.cls}">${escapeHtml(b.text)}</span>` : "";
+      const sentHtml = c.mailSentAt ? `<span class="badge sent">✅ Email sent</span>` : "";
+      const div = document.createElement("div");
+      div.className = "item";
       div.innerHTML = `
         <div class="left">
           <strong>${escapeHtml(c.name)}</strong>
-          <div class="meta">
-            Expiry: ${escapeHtml(formatISOToMDY(c.expiry))}
-            • Email: ${escapeHtml(c.email)}
-            • Doctor: ${escapeHtml(c.doctor)}${prepared}
-          </div>
+          <div class="meta">Expiry: ${escapeHtml(formatISOToMDY(c.expiry))} • Email: ${escapeHtml(c.email)} • Doctor: ${escapeHtml(c.doctor)}</div>
         </div>
         <div class="right">
           ${badgeHtml}
+          ${sentHtml}
           <button class="btnMini" type="button">View / Send Email</button>
         </div>
       `;
-      div.querySelector('button').addEventListener('click', ()=> openModal(c.id));
+      div.querySelector("button").addEventListener("click", ()=> openModal(c.id));
       listEl.appendChild(div);
     });
   }
 
-  q.addEventListener('input', render);
-  document.getElementById('clearSearch').addEventListener('click', ()=>{
-    q.value='';
-    render();
-  });
+  q.addEventListener("input", render);
+  $("clearSearch").addEventListener("click", ()=>{ q.value=""; render(); });
 
-  // ===== Modal =====
-  const mb = document.getElementById('mb');
-  const mTitle = document.getElementById('mTitle');
-  const mBody = document.getElementById('mBody');
-  const mClose = document.getElementById('mClose');
-  const sendBtn = document.getElementById('sendBtn');
-  const deleteBtn = document.getElementById('deleteBtn');
+  // ====== MODAL ======
+  const mb = $("mb");
+  const mTitle = $("mTitle");
+  const mBody = $("mBody");
+  const mClose = $("mClose");
+  const sendBtn = $("sendBtn");
+  const deleteBtn = $("deleteBtn");
+  let modalId = null;
 
   function openModal(id){
-    const cert = readCerts().find(c => c.id === id);
+    const cert = normalize(readCerts()).find(c => c.id === id);
     if(!cert) return;
+    modalId = id;
 
     const dl = daysLeft(cert.expiry);
     const b = badgeFor(dl);
 
     mTitle.textContent = cert.name;
+
+    const statusText = b ? b.text.replace(/^[^A-Za-z0-9]+/,'').trim() : "Active";
+    const sentBlock = cert.mailSentAt
+      ? `<div style="margin-top:10px;color:#16a34a;font-weight:950">✅ Email sent</div>`
+      : "";
+
     mBody.innerHTML = `
       <div><b>Doctor:</b> ${escapeHtml(cert.doctor)}</div>
       <div><b>Email:</b> ${escapeHtml(cert.email)}</div>
       <div><b>Expiration Date:</b> ${escapeHtml(formatISOToMDY(cert.expiry))}</div>
       <div><b>Days Remaining:</b> ${dl}</div>
-      <div><b>Status:</b> ${b ? escapeHtml(b.text) : "Active"}</div>
-      ${cert.mailPreparedAt ? `<div style="margin-top:10px;color:#16a34a;font-weight:900">✅ Email prepared</div>` : ``}
+      <div><b>Status:</b> ${escapeHtml(statusText)}</div>
+      ${sentBlock}
     `;
 
-    // ✅ زر واحد: First أو Second
+    // Only allow email inside 30 days
     sendBtn.disabled = !(dl <= 30);
-    sendBtn.style.opacity = sendBtn.disabled ? .5 : 1;
-    sendBtn.textContent = (dl <= 7) ? "Send Second Alert Email" : (dl <= 30 ? "Send First Alert Email" : "Send Email");
+    sendBtn.style.opacity = sendBtn.disabled ? 0.55 : 1;
 
-    sendBtn.onclick = ()=>{
-      const fresh = readCerts().find(c => c.id === id);
+    if (dl <= 7) sendBtn.textContent = "Send Second Alert Email";
+    else if (dl <= 30) sendBtn.textContent = "Send First Alert Email";
+    else sendBtn.textContent = "Send Email";
+
+    sendBtn.onclick = () => {
+      const fresh = normalize(readCerts()).find(c => c.id === id);
       if (fresh) openMail(fresh);
     };
 
-    deleteBtn.onclick = ()=>{
-      const list = readCerts().filter(c => c.id !== id);
+    deleteBtn.onclick = () => {
+      const list = normalize(readCerts()).filter(c => c.id !== id);
       writeCerts(list);
       showToast("Deleted ✅");
       closeModal();
       render();
     };
 
-    mb.style.display = 'flex';
+    mb.style.display = "flex";
   }
 
-  function closeModal(){ mb.style.display='none'; }
-  mClose.addEventListener('click', closeModal);
-  mb.addEventListener('click', (e)=>{ if(e.target === mb) closeModal(); });
+  function closeModal(){
+    mb.style.display = "none";
+    modalId = null;
+  }
+  mClose.addEventListener("click", closeModal);
+  mb.addEventListener("click", (e)=>{ if(e.target === mb) closeModal(); });
 
-  // ===== Smart Import / Export (CSV أو JSON) =====
-  const smartBtn = document.getElementById("smartDataBtn");
-  const smartFile = document.getElementById("smartDataFile");
+  // ====== SMART IMPORT/EXPORT (CSV or JSON) ======
+  const smartBtn = $("smartDataBtn");
+  const smartFile = $("smartDataFile");
 
   function download(filename, text, mime){
     const blob = new Blob([text], { type: mime });
@@ -447,7 +500,7 @@
     setTimeout(()=>URL.revokeObjectURL(url), 300);
   }
 
-  const esc = (s) => {
+  const escCSV = (s) => {
     const v = String(s ?? "");
     return /[",\n]/.test(v) ? `"${v.replace(/"/g,'""')}"` : v;
   };
@@ -456,19 +509,17 @@
     const rows = [
       ["Certificate Name","Doctor Name","Expiration Date (YYYY-MM-DD)","Email Address"].join(","),
       ...list.map(o => [
-        esc(o.name ?? ""),
-        esc(o.doctor ?? ""),
-        esc(o.expiry ?? ""),
-        esc(o.email ?? "")
+        escCSV(o.name),
+        escCSV(o.doctor),
+        escCSV(o.expiry),
+        escCSV(o.email)
       ].join(","))
     ];
     download("certificates.csv", rows.join("\n"), "text/csv;charset=utf-8");
-    showToast("CSV downloaded ✅");
   }
 
   function exportJSON(list){
     download("certificates.json", JSON.stringify(list, null, 2), "application/json;charset=utf-8");
-    showToast("JSON downloaded ✅");
   }
 
   function parseCSV(text){
@@ -491,24 +542,6 @@
     return rows.filter(r => r.some(x => String(x).trim() !== ""));
   }
 
-  function makeId(){
-    return 'c_' + Math.random().toString(16).slice(2) + Date.now().toString(16);
-  }
-
-  function normalizeImported(arr){
-    return (arr || []).map(x => {
-      const o = (x && typeof x === "object") ? x : {};
-      return {
-        id: o.id || makeId(),
-        name: String(o.name ?? o.certificateName ?? o["Certificate Name"] ?? "").trim(),
-        doctor: String(o.doctor ?? o.doctorName ?? o["Doctor Name"] ?? "").trim(),
-        expiry: String(o.expiry ?? o.expirationDate ?? o["Expiration Date (YYYY-MM-DD)"] ?? o["Expiration Date"] ?? "").trim(),
-        email: String(o.email ?? o.emailAddress ?? o["Email Address"] ?? "").trim(),
-        createdAt: o.createdAt || new Date().toISOString()
-      };
-    }).filter(x => x.name && x.doctor && x.expiry && x.email);
-  }
-
   async function importFile(file){
     const text = await file.text();
     const ext = (file.name.split(".").pop() || "").toLowerCase();
@@ -517,43 +550,66 @@
     try{
       if(ext === "json" || text.trim().startsWith("[")){
         const json = JSON.parse(text);
-        incoming = normalizeImported(Array.isArray(json) ? json : []);
+        incoming = normalize(Array.isArray(json) ? json : []);
       }else{
         const rows = parseCSV(text);
-        if(rows.length < 2) throw new Error("Empty CSV");
-        // نفترض الهيدر موجود مثل ما نصدره
-        const dataLines = rows.slice(1);
-        const data = dataLines.map(r => ({
-          name: r[0] ?? "",
-          doctor: r[1] ?? "",
-          expiry: r[2] ?? "",
-          email: r[3] ?? ""
-        }));
-        incoming = normalizeImported(data);
+        if(!rows.length) throw new Error("Empty CSV");
+
+        const header = rows[0].map(s => String(s).trim().toLowerCase());
+        const hasHeader = header.some(h => h.includes("doctor") || h.includes("certificate") || h.includes("email") || h.includes("expir"));
+
+        let start = 0;
+        let idx = { name:0, doctor:1, expiry:2, email:3 };
+
+        if(hasHeader){
+          start = 1;
+          const find = (keys)=>header.findIndex(h=>keys.some(k=>h.includes(k)));
+          idx.name = Math.max(0, find(["certificate","name"]));
+          idx.doctor = Math.max(0, find(["doctor"]));
+          idx.expiry = Math.max(0, find(["expir","expiry","expiration"]));
+          idx.email = Math.max(0, find(["email"]));
+        }
+
+        const data = [];
+        for(let i=start;i<rows.length;i++){
+          const r = rows[i];
+          data.push({
+            id: uid(),
+            name: (r[idx.name] ?? "").trim(),
+            doctor: (r[idx.doctor] ?? "").trim(),
+            expiry: (r[idx.expiry] ?? "").trim(),
+            email: (r[idx.email] ?? "").trim(),
+            createdAt: new Date().toISOString()
+          });
+        }
+        incoming = normalize(data);
       }
     }catch(e){
       alert("Import failed. Please choose a valid CSV or JSON file.");
       return;
     }
 
-    const existing = readCerts();
+    const existing = normalize(readCerts());
     const map = new Map(existing.map(x => [x.id, x]));
-    for (const it of incoming) map.set(it.id, { ...map.get(it.id), ...it });
-
+    for (const it of incoming){
+      // If an imported item has an id that already exists, merge; otherwise add
+      map.set(it.id, { ...map.get(it.id), ...it });
+    }
     writeCerts([...map.values()]);
     alert(`Imported ${incoming.length} item(s) ✅`);
     render();
   }
 
-  if(smartBtn && smartFile){
+  if (smartBtn && smartFile){
     smartBtn.addEventListener("click", () => {
       const doExport = confirm("OK = Export\nCancel = Import");
-      if(doExport){
-        const asCSV = confirm("OK = CSV\nCancel = JSON");
-        const list = readCerts();
-        if(asCSV) exportCSV(list);
+      if (doExport){
+        const asCSV = confirm("OK = CSV (Excel)\nCancel = JSON");
+        const list = normalize(readCerts());
+        if (asCSV) exportCSV(list);
         else exportJSON(list);
-      }else{
+        showToast("Exported ✅");
+      } else {
         smartFile.value = "";
         smartFile.click();
       }
@@ -561,21 +617,23 @@
 
     smartFile.addEventListener("change", (e) => {
       const f = e.target.files && e.target.files[0];
-      if(f) importFile(f);
+      if (f) importFile(f);
     });
   }
 
-  // ===== Nav =====
-  document.getElementById('toDash').addEventListener('click', ()=> window.location.href='./dashboard.html');
-  document.getElementById('logout').addEventListener('click', ()=>{
-    sessionStorage.removeItem('ct_logged_in');
-    window.location.href='./index.html';
+  // ====== NAV ======
+  $("toDash").addEventListener("click", ()=> window.location.href="./dashboard.html");
+  $("logout").addEventListener("click", ()=>{
+    SESSION_KEYS.forEach(k => sessionStorage.removeItem(k));
+    window.location.href = "./index.html";
   });
 
-  // ===== Start =====
+  // ====== START ======
+  // Write back normalized list (one-time cleanup)
+  const cleaned = normalize(readCerts());
+  writeCerts(cleaned);
   render();
 })();
 </script>
-
 </body>
 </html>
